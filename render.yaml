@@ -1,0 +1,30 @@
+databases:
+  - name: inventory-db
+    plan: free
+    region: oregon
+    databaseName: inventory_db
+    user: inventory
+
+services:
+  - type: web
+    name: inventory-backend
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PROJECT_NAME
+        value: Inventory & Order Management System
+      - key: API_V1_STR
+        value: /api/v1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-db
+          property: connectionString
+      # Update this after the frontend is deployed to Vercel, so the
+      # backend only accepts browser requests from the real frontend origin.
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://CHANGE-ME.vercel.app"]'
