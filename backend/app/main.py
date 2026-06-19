@@ -87,6 +87,16 @@ def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
+@app.get("/", tags=["health"])
+def root() -> dict:
+    return {
+        "message": f"{settings.PROJECT_NAME} API",
+        "status": "running",
+        "docs": "/docs",
+        "api_base": settings.API_V1_STR,
+    }
+
+
 @app.get("/health", tags=["health"])
 def health_check() -> dict:
     return {"status": "ok"}
