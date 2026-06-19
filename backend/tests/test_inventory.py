@@ -68,3 +68,30 @@ def test_delete_product_used_in_order_rejected(client):
     assert response.status_code == 409
     assert response.json()["detail"] == "Cannot delete product because it is used in orders"
     assert client.get(f"/api/v1/products/{product['id']}").status_code == 200
+
+
+def test_delete_unused_customer_succeeds(client):
+    customer = make_customer(client, email="unused@example.com")
+
+    response = client.delete(f"/api/v1/customers/{customer['id']}")
+
+    assert response.status_code == 204
+    assert client.get(f"/api/v1/customers/{customer['id']}").status_code == 404
+
+
+def test_delete_customer_with_orders_rejected(client):
+    product = make_product(client, sku="SKU-CUSTOMER-ORDER", quantity=10)
+    customer = make_customer(client, email="has-orders@example.com")
+    client.post(
+        "/api/v1/orders/",
+        json={
+            "customer_id": customer["id"],
+            "items": [{"product_id": product["id"], "quantity": 1}],
+        },
+    )
+
+    response = client.delete(f"/api/v1/customers/{customer['id']}")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Cannot delete customer because it has existing orders"
+    assert client.get(f"/api/v1/customers/{customer['id']}").status_code == 200

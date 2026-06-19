@@ -1,11 +1,15 @@
 from typing import List
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import DuplicateError, NotFoundError
+from app.core.exceptions import ConflictError, DuplicateError, NotFoundError
 from app.models.customer import Customer
+from app.models.order import Order
 from app.repositories.customer_repository import CustomerRepository
 from app.schemas.customer import CustomerCreate, CustomerUpdate
+
+_IN_USE_MESSAGE = "Cannot delete customer because it has existing orders"
 
 
 class CustomerService:
@@ -43,4 +47,13 @@ class CustomerService:
 
     def delete_customer(self, customer_id: int) -> None:
         customer = self.get_customer(customer_id)
-        self.repository.delete(customer)
+
+        in_use = self.db.query(Order).filter(Order.customer_id == customer_id).first()
+        if in_use:
+            raise ConflictError(_IN_USE_MESSAGE)
+
+        try:
+            self.repository.delete(customer)
+        except IntegrityError:
+            self.db.rollback()
+            raise ConflictError(_IN_USE_MESSAGE)
